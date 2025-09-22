@@ -30,12 +30,41 @@ class StudentController extends Controller
     }
 
     /**
-     * Menampilkan daftar semua siswa.
+     * Menampilkan daftar semua siswa dengan fungsionalitas pencarian yang disempurnakan.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $students = User::student()->latest()->paginate(10);
-        return view('admin.students.index', compact('students'));
+        $searchName = $request->input('search_name');
+        $filterGrade = $request->input('filter_grade');
+        $filterMajor = $request->input('filter_major');
+
+        $query = User::student();
+
+        // Filter berdasarkan nama atau NIS
+        if ($searchName) {
+            $query->where(function ($q) use ($searchName) {
+                $q->where('name', 'like', "%{$searchName}%")
+                  ->orWhere('nis', 'like', "%{$searchName}%");
+            });
+        }
+
+        // Filter berdasarkan tingkat kelas (contoh: 'X %')
+        if ($filterGrade) {
+            $query->where('class', 'like', $filterGrade . ' %');
+        }
+
+        // Filter berdasarkan jurusan (contoh: '% AKUNTANSI')
+        if ($filterMajor) {
+            $query->where('class', 'like', '% ' . $filterMajor);
+        }
+
+        $students = $query->latest()->paginate(10)->appends($request->all());
+
+        // Mengirim data kelas dan jurusan untuk dropdown filter
+        return view('admin.students.index', array_merge(
+            compact('students'),
+            $this->getClassData()
+        ));
     }
 
     /**
@@ -45,7 +74,6 @@ class StudentController extends Controller
     {
         $pageTitle = 'Tambah Siswa';
         $guardians = User::query()->guardian()->orderBy('name')->get();
-        // Mengirim data kelas dan jurusan ke view
         return view('admin.students.form', array_merge(
             compact('pageTitle', 'guardians'),
             $this->getClassData()
@@ -74,7 +102,6 @@ class StudentController extends Controller
         $data = $request->except('password', 'photo', 'grade', 'major');
         $data['password'] = Hash::make($request->password);
         $data['role'] = 'siswa';
-        // Menggabungkan grade dan major menjadi satu string untuk disimpan
         $data['class'] = $request->grade . ' ' . $request->major;
 
         if ($request->hasFile('photo')) {
@@ -111,7 +138,7 @@ class StudentController extends Controller
             'nis' => ['required', 'string', 'max:255', 'unique:'.User::class.',nis,'.$student->id],
             'grade' => ['required', Rule::in($classData['grades'])],
             'major' => ['required', Rule::in($classData['majors'])],
-            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:10240'],
             'card_uid' => ['nullable', 'string', 'max:255', 'unique:'.User::class.',card_uid,'.$student->id],
             'fingerprint_id' => ['nullable', 'string', 'max:255', 'unique:'.User::class.',fingerprint_id,'.$student->id],
             'guardian_id' => ['required', 'exists:users,id'],

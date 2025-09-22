@@ -11,11 +11,15 @@ use App\Http\Controllers\Panel\DashboardController as PanelDashboardController;
 use App\Http\Controllers\Panel\LeaveController;
 use App\Http\Controllers\Admin\StudentImportController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\Admin\GuardianImportExportController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
+|
+| This is where you can register web routes for your application.
+|
 */
 
 // Rute untuk Halaman Monitor Absensi (dapat diakses publik)
@@ -50,12 +54,20 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Student Management
     Route::resource('students', StudentController::class);
 
+    // Rute untuk Fitur Impor & Ekspor Wali Murid
+    Route::get('guardians/import', [GuardianImportExportController::class, 'showImportForm'])->name('guardians.import.show');
+    Route::post('guardians/import', [GuardianImportExportController::class, 'storeImport'])->name('guardians.import.store');
+    Route::get('guardians/import/template', [GuardianImportExportController::class, 'downloadTemplate'])->name('guardians.import.template');
+    Route::get('guardians/export', [GuardianImportExportController::class, 'export'])->name('guardians.export');
+
+    // Rute API untuk pencarian wali murid (dari form siswa)
+    Route::get('/guardians/search', [GuardianController::class, 'search'])->name('guardians.search');
+
     // Guardian Management
     Route::resource('guardians', GuardianController::class);
 
     // Attendance Management
     Route::get('attendances', [AdminAttendanceController::class, 'index'])->name('attendances.index');
-    // PERBAIKAN: Menambahkan kembali rute untuk ekspor absensi
     Route::get('attendances/export', [AdminAttendanceController::class, 'export'])->name('attendances.export');
 
     // Simulation
