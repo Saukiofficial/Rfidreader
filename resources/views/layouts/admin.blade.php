@@ -110,23 +110,116 @@
         .hamburger-line {
             transition: all 0.3s ease;
         }
+
+        /* Mobile overlay */
+        .mobile-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1023px) {
+            .sidebar-mobile {
+                transform: translateX(-100%);
+            }
+
+            .sidebar-mobile.open {
+                transform: translateX(0);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar-desktop {
+                width: 256px;
+                position: relative;
+                transform: translateX(0) !important;
+            }
+
+            .sidebar-desktop.collapsed {
+                width: 80px;
+            }
+
+            .sidebar-desktop.collapsed .menu-text {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            .sidebar-desktop.collapsed .logo-text {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+
+        /* Smooth transitions */
+        .sidebar-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .menu-text {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .logo-text {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal">
 
-    <div class="flex h-screen bg-gray-200" x-data="{ sidebarOpen: true }">
+    <div class="flex h-screen bg-gray-200"
+         x-data="{
+             sidebarOpen: window.innerWidth >= 1024,
+             sidebarCollapsed: false,
+             isMobile: window.innerWidth < 1024
+         }"
+         x-init="
+             $watch('sidebarOpen', value => {
+                 if (!isMobile && !value) {
+                     sidebarCollapsed = true;
+                 } else if (!isMobile && value) {
+                     sidebarCollapsed = false;
+                 }
+             });
+
+             window.addEventListener('resize', () => {
+                 isMobile = window.innerWidth < 1024;
+                 if (!isMobile) {
+                     sidebarOpen = true;
+                 }
+             });
+         ">
+
+        <!-- Mobile Overlay -->
+        <div x-show="sidebarOpen && isMobile"
+             x-transition:enter="transition-opacity ease-linear duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-300"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="sidebarOpen = false"
+             class="fixed inset-0 z-20 mobile-overlay lg:hidden"
+             x-cloak></div>
+
         <!-- Sidebar -->
         <aside
-            class="w-64 sidebar-gradient text-white flex-shrink-0 flex flex-col transition-all duration-500 ease-in-out fixed lg:relative z-20 h-full"
-            :class="{'w-64': sidebarOpen, 'w-0': !sidebarOpen, 'lg:w-64': sidebarOpen, 'lg:w-0': !sidebarOpen}"
-            @click.away="sidebarOpen = false"
-            x-cloak
+            class="sidebar-gradient text-white flex-shrink-0 flex flex-col sidebar-transition z-30"
+            :class="{
+                // Mobile classes
+                'fixed inset-y-0 left-0 w-64 sidebar-mobile': isMobile,
+                'sidebar-mobile open': isMobile && sidebarOpen,
+
+                // Desktop classes
+                'sidebar-desktop': !isMobile,
+                'collapsed': !isMobile && sidebarCollapsed,
+            }"
         >
             <!-- Logo Section -->
             <div class="h-24 flex items-center justify-center border-b border-white/10 px-4">
-                <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300 flex flex-col items-center">
+                <div class="transition-all duration-300 flex flex-col items-center logo-text"
+                     :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0 scale-75': sidebarCollapsed && !isMobile}">
                     <!-- School Logo -->
-                    <div class="w-12 h-12 mb-2 rounded-full bg-white/10 p-2 backdrop-blur-sm border border-white/20">
+                    <div class="w-12 h-12 mb-2 rounded-full bg-white/10 p-2 backdrop-blur-sm border border-white/20 flex-shrink-0">
                         <img src="{{ asset('images/logo-smk-mahardhika.png') }}"
                              alt="Logo SMK Mahardhika"
                              class="w-full h-full object-contain rounded-full"
@@ -137,79 +230,113 @@
                         </div>
                     </div>
 
-                    <h1 class="text-lg font-bold logo-animation bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-center">
+                    <h1 class="text-lg font-bold logo-animation bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent text-center"
+                        x-show="!sidebarCollapsed || isMobile">
                         AbsenSI
                     </h1>
-                    <p class="text-xs text-blue-200 text-center font-medium">SMK Mahardhika</p>
+                    <p class="text-xs text-blue-200 text-center font-medium"
+                       x-show="!sidebarCollapsed || isMobile">SMK Mahardhika</p>
                 </div>
+            </div>
+
+            <!-- Toggle Button for Desktop -->
+            <div class="hidden lg:flex justify-end px-2 py-2 border-b border-white/10">
+                <button @click="sidebarCollapsed = !sidebarCollapsed"
+                        class="p-2 rounded-lg hover:bg-white/10 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200"
+                         :class="{'rotate-180': sidebarCollapsed}"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </button>
             </div>
 
             <!-- Navigation Menu -->
             <nav class="flex-1 px-4 py-6 space-y-3 overflow-y-auto custom-scrollbar">
                 <!-- Dashboard -->
-                <a href="{{ route('admin.dashboard') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                    <div class="menu-icon flex items-center justify-center w-8 h-8 mr-3 flex-shrink-0">
+                <a href="{{ route('admin.dashboard') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                   :class="{'justify-center': sidebarCollapsed && !isMobile}">
+                    <div class="menu-icon flex items-center justify-center w-8 h-8 flex-shrink-0"
+                         :class="{'mr-3': !sidebarCollapsed || isMobile}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                         </svg>
                     </div>
-                    <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300">
+                    <div class="menu-text transition-all duration-300"
+                         :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0': sidebarCollapsed && !isMobile}"
+                         x-show="!sidebarCollapsed || isMobile">
                         <span class="font-medium">Dashboard</span>
                         <p class="text-xs text-blue-200 mt-0.5">Ringkasan data</p>
                     </div>
                 </a>
 
-                <div class="sidebar-divider"></div>
+                <div class="sidebar-divider" x-show="!sidebarCollapsed || isMobile"></div>
 
                 <!-- Data Siswa -->
-                <a href="{{ route('admin.students.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.students.*') ? 'active' : '' }}">
-                    <div class="menu-icon flex items-center justify-center w-8 h-8 mr-3 flex-shrink-0">
+                <a href="{{ route('admin.students.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.students.*') ? 'active' : '' }}"
+                   :class="{'justify-center': sidebarCollapsed && !isMobile}">
+                    <div class="menu-icon flex items-center justify-center w-8 h-8 flex-shrink-0"
+                         :class="{'mr-3': !sidebarCollapsed || isMobile}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300">
+                    <div class="menu-text transition-all duration-300"
+                         :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0': sidebarCollapsed && !isMobile}"
+                         x-show="!sidebarCollapsed || isMobile">
                         <span class="font-medium">Data Siswa</span>
                         <p class="text-xs text-blue-200 mt-0.5">Kelola siswa</p>
                     </div>
                 </a>
 
                 <!-- Data Wali Murid -->
-                <a href="{{ route('admin.guardians.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.guardians.*') ? 'active' : '' }}">
-                    <div class="menu-icon flex items-center justify-center w-8 h-8 mr-3 flex-shrink-0">
+                <a href="{{ route('admin.guardians.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.guardians.*') ? 'active' : '' }}"
+                   :class="{'justify-center': sidebarCollapsed && !isMobile}">
+                    <div class="menu-icon flex items-center justify-center w-8 h-8 flex-shrink-0"
+                         :class="{'mr-3': !sidebarCollapsed || isMobile}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zm-2 5a5 5 0 00-4.545 2.918A9.953 9.953 0 006 17a9.953 9.953 0 004.545-2.082A5 5 0 007 11zm11-3a3 3 0 11-6 0 3 3 0 016 0zm-2 5a5 5 0 00-4.545 2.918A9.953 9.953 0 0014 17a9.953 9.953 0 004.545-2.082A5 5 0 0016 11z" />
                         </svg>
                     </div>
-                    <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300">
+                    <div class="menu-text transition-all duration-300"
+                         :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0': sidebarCollapsed && !isMobile}"
+                         x-show="!sidebarCollapsed || isMobile">
                         <span class="font-medium">Wali Murid</span>
                         <p class="text-xs text-blue-200 mt-0.5">Data orang tua</p>
                     </div>
                 </a>
 
-                <div class="sidebar-divider"></div>
+                <div class="sidebar-divider" x-show="!sidebarCollapsed || isMobile"></div>
 
                 <!-- Rekap Absensi -->
-                <a href="{{ route('admin.attendances.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.attendances.*') ? 'active' : '' }}">
-                    <div class="menu-icon flex items-center justify-center w-8 h-8 mr-3 flex-shrink-0">
+                <a href="{{ route('admin.attendances.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.attendances.*') ? 'active' : '' }}"
+                   :class="{'justify-center': sidebarCollapsed && !isMobile}">
+                    <div class="menu-icon flex items-center justify-center w-8 h-8 flex-shrink-0"
+                         :class="{'mr-3': !sidebarCollapsed || isMobile}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300">
+                    <div class="menu-text transition-all duration-300"
+                         :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0': sidebarCollapsed && !isMobile}"
+                         x-show="!sidebarCollapsed || isMobile">
                         <span class="font-medium">Rekap Absensi</span>
                         <p class="text-xs text-blue-200 mt-0.5">Laporan kehadiran</p>
                     </div>
                 </a>
 
                 <!-- Simulasi Absensi -->
-                <a href="{{ route('admin.simulation.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.simulation.*') ? 'active' : '' }}">
-                    <div class="menu-icon flex items-center justify-center w-8 h-8 mr-3 flex-shrink-0">
+                <a href="{{ route('admin.simulation.index') }}" class="glass-menu-item flex items-center px-4 py-3 rounded-xl group {{ request()->routeIs('admin.simulation.*') ? 'active' : '' }}"
+                   :class="{'justify-center': sidebarCollapsed && !isMobile}">
+                    <div class="menu-icon flex items-center justify-center w-8 h-8 flex-shrink-0"
+                         :class="{'mr-3': !sidebarCollapsed || isMobile}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300">
+                    <div class="menu-text transition-all duration-300"
+                         :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0': sidebarCollapsed && !isMobile}"
+                         x-show="!sidebarCollapsed || isMobile">
                         <span class="font-medium">Simulasi</span>
                         <p class="text-xs text-blue-200 mt-0.5">Test absensi</p>
                     </div>
@@ -218,7 +345,9 @@
 
             <!-- Footer -->
             <div class="px-4 py-4 border-t border-white/10">
-                <div :class="{'opacity-100': sidebarOpen, 'opacity-0': !sidebarOpen}" class="transition-all duration-300">
+                <div class="transition-all duration-300"
+                     :class="{'opacity-100': !sidebarCollapsed || isMobile, 'opacity-0': sidebarCollapsed && !isMobile}"
+                     x-show="!sidebarCollapsed || isMobile">
                     <p class="text-xs text-blue-200 text-center">
                         © 2025 Sistem Absensi SMK Mahardhika
                     </p>
@@ -226,6 +355,11 @@
                         <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         <span class="text-xs text-green-300">Online</span>
                     </div>
+                </div>
+                <!-- Collapsed footer icon -->
+                <div class="flex justify-center"
+                     x-show="sidebarCollapsed && !isMobile">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 </div>
             </div>
         </aside>
@@ -235,7 +369,8 @@
             <!-- Header -->
             <header class="flex justify-between items-center p-6 bg-white/80 backdrop-filter backdrop-blur-lg border-b border-gray-200/50 shadow-sm">
                 <div class="flex items-center space-x-4">
-                    <button @click.stop="sidebarOpen = !sidebarOpen" class="text-gray-600 hover:text-gray-900 focus:outline-none lg:hidden transition-colors duration-200">
+                    <button @click="sidebarOpen = !sidebarOpen"
+                            class="text-gray-600 hover:text-gray-900 focus:outline-none lg:hidden transition-colors duration-200">
                         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path class="hamburger-line" d="M4 6H20M4 12H20M4 18H11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -246,10 +381,10 @@
                 <div x-data="{ dropdownOpen: false }" class="relative">
                     <button @click="dropdownOpen = !dropdownOpen" class="flex items-center space-x-3 p-2 rounded-xl hover:bg-gray-100 transition-colors duration-200 group">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-lg group-hover:shadow-xl transition-shadow duration-200">
-                            {{ substr(Auth::user()->name, 0, 1) }}
+                            {{ substr(Auth::user()->name ?? 'Admin', 0, 1) }}
                         </div>
                         <div class="hidden md:block text-left">
-                            <p class="text-sm font-semibold text-gray-700">{{ Auth::user()->name }}</p>
+                            <p class="text-sm font-semibold text-gray-700">{{ Auth::user()->name ?? 'Administrator' }}</p>
                             <p class="text-xs text-gray-500">Administrator</p>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors duration-200" viewBox="0 0 20 20" fill="currentColor">
@@ -269,7 +404,7 @@
                          x-cloak>
 
                         <div class="px-4 py-3 border-b border-gray-100">
-                            <p class="text-sm font-semibold text-gray-800">{{ Auth::user()->name }}</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ Auth::user()->name ?? 'Administrator' }}</p>
                             <p class="text-xs text-gray-500">{{ Auth::user()->email ?? 'admin@school.com' }}</p>
                         </div>
 
